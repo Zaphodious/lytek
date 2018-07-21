@@ -12,4 +12,8 @@
 
 (deftest gens-okay-test
   (testing "That Characters generate"
-    (is (gen/generate (s/gen :lytek/character)))))
+    (is [(gen/sample (s/gen :lytek/character))
+         (gen/sample (s/gen :lytek/solar))])))     
+
+
+  

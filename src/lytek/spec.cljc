@@ -1,6 +1,7 @@
 (ns lytek.spec
   (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]))
+            [clojure.spec.gen.alpha :as gen]
+            [clojure.set :as se]))
 
 
 (def attribute-keys
@@ -53,18 +54,25 @@
   #{:character
     :rulebook})
 
-(s/def :lytek/character-type
+(def solar-castes
   #{:dawn
     :night
     :eclipse
     :twilight
-    :zenith
+    :zenith})  
 
-    :wood
+(def terrestrial-aspects
+  #{:wood
     :air
     :water
     :fire
     :earth})
+
+(s/def :lytek/character-type
+  (se/union solar-castes
+            terrestrial-aspects))      
+
+    
 
 
 (s/def :lytek/rulebooks
@@ -73,14 +81,19 @@
 (s/def :lytek/attribute
   (set attribute-keys))
 (s/def :lytek/attributes
-  (s/map-of :lytek/attribute (s/int-in 0 5)))
+  (s/map-of :lytek/attribute (s/int-in 0 6)))
 
 (s/def :lytek/ability
   (set ability-keys))
 (s/def :lytek/abilities
   (s/and
-    (s/map-of :lytek/ability (s/int-in 0 5))
+    (s/map-of :lytek/ability (s/int-in 0 6))
     #(not (or (:craft %) (:martial-arts %)))))
+
+(s/def :lytek/supernal
+  :lytek/ability)
+(s/def :lytek/favored-abilities
+  (s/coll-of :lytek/ability :count 10 :into #{}))  
 
 (s/def :lytek/charms
   (s/coll-of string? :into []))
@@ -88,23 +101,28 @@
 (s/def :lytek/anima
   string?)
 
+(s/def :lytek/health-level
+  (s/int-in 0 51))
+(s/def :lytek/health-levels
+  (s/tuple :lytek/health-level :lytek/health-level :lytek/health-level :lytek/health-level))
+(s/def :lytek/damage-bashing
+  pos-int?)
+(s/def :lytek/damage-lethal
+  pos-int?)
+(s/def :lytek/damage-aggravated
+  pos-int?)
+(s/def :lytek/healthy
+  (s/keys :req-un [:lytek/health-levels
+                   :lytek/damage-bashing
+                   :lytek/damage-lethal
+                   :lytek/damage-aggravated]))
 
-(s/def :lytek.health/levels
-  (s/tuple pos-int? pos-int? pos-int? pos-int?))
-(s/def :lytek.health/bashing
-  pos-int?)
-(s/def :lytek.health.damage/bashing
-  pos-int?)
-(s/def :lytek.health.damage/lethal
-  pos-int?)
-(s/def :lytek.health.damage/aggravated
-  pos-int?)
-(s/def :lytek/health
-  (s/keys :req-un [:lytek.health/levels
-                   :lytek.health.damage/bashing
-                   :lytek.health.damage/lethal
-                   :lytek.health.damage/aggravated]))
 
+(s/def :lytek/willpower-temporary (s/int-in 0 11))
+(s/def :lytek/willpower-maximum (s/int-in 0 11))
+
+(s/def :lytek/limit-trigger string?)
+(s/def :lytek/limit-accrued (s/int-in 0 11))
 
 (s/def :lytek/entity
   (s/keys :req-un [:lytek/category
@@ -113,9 +131,12 @@
 
 (s/def :lytek/combatant
   (s/merge :lytek/entity
+           :lytek/healthy
            (s/keys :req-un [:lytek/attributes
                             :lytek/abilities
-                            :lytek/health])))
+                            :lytek/willpower-maximum
+                            :lytek/willpower-temporary])))
+
 
 (s/def :lytek/character
   (s/and
@@ -125,4 +146,15 @@
                               :lytek/anima
                               :lytek/rulebooks
                               :lytek/charms]))
+             
     #(= (:category %) :character)))
+
+(s/def :lytek/solar
+  (s/and
+    (s/merge :lytek/character
+            (s/keys :req-un [:lytek/limit-trigger
+                             :lytek/limit-accrued
+                             :lytek/supernal
+                             :lytek/favored-abilities]))
+    #(s/valid? solar-castes (:character-type %))
+    #(s/valid? (set (:lytek/favored-abilities %)) (:supernal %))))
