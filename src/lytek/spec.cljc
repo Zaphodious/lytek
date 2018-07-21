@@ -72,7 +72,12 @@
   (se/union solar-castes
             terrestrial-aspects))      
 
-    
+
+(s/def :lytek/description
+  string?)
+
+(s/def :lytek/rank  
+  (s/int-in 0 6))
 
 
 (s/def :lytek/rulebooks
@@ -81,14 +86,21 @@
 (s/def :lytek/attribute
   (set attribute-keys))
 (s/def :lytek/attributes
-  (s/map-of :lytek/attribute (s/int-in 0 6)))
+  (s/map-of :lytek/attribute (s/int-in 1 6)))
 
 (s/def :lytek/ability
   (set ability-keys))
 (s/def :lytek/abilities
   (s/and
-    (s/map-of :lytek/ability (s/int-in 0 6))
+    (s/map-of :lytek/ability :lytek/rank)
     #(not (or (:craft %) (:martial-arts %)))))
+
+(s/def :lytek/additional-ability
+  (s/tuple :lytek/ability
+           :lytek/rank
+           :lytek/description))                    
+(s/def :lytek/additional-abilities
+  (s/coll-of :lytek/additional-ability))  
 
 (s/def :lytek/supernal
   :lytek/ability)
@@ -104,7 +116,7 @@
 (s/def :lytek/health-level
   (s/int-in 0 51))
 (s/def :lytek/health-levels
-  (s/tuple :lytek/health-level :lytek/health-level :lytek/health-level :lytek/health-level))
+  (s/coll-of :lytek/health-level :count 4 :into []))
 (s/def :lytek/damage-bashing
   pos-int?)
 (s/def :lytek/damage-lethal
@@ -124,6 +136,8 @@
 (s/def :lytek/limit-trigger string?)
 (s/def :lytek/limit-accrued (s/int-in 0 11))
 
+
+
 (s/def :lytek/entity
   (s/keys :req-un [:lytek/category
                    :lytek/name
@@ -134,6 +148,7 @@
            :lytek/healthy
            (s/keys :req-un [:lytek/attributes
                             :lytek/abilities
+                            :lytek/additional-abilities
                             :lytek/willpower-maximum
                             :lytek/willpower-temporary])))
 
@@ -145,7 +160,7 @@
              (s/keys :req-un [:lytek/character-type
                               :lytek/anima
                               :lytek/rulebooks
-                              :lytek/charms]))
+                              :lytek/charms]))         
              
     #(= (:category %) :character)))
 
@@ -156,5 +171,5 @@
                              :lytek/limit-accrued
                              :lytek/supernal
                              :lytek/favored-abilities]))
-    #(s/valid? solar-castes (:character-type %))
-    #(s/valid? (set (:lytek/favored-abilities %)) (:supernal %))))
+    #(contains? solar-castes (:character-type %))
+    #(contains? (set (:lytek/favored-abilities %)) (:supernal %))))
