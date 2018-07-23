@@ -1,8 +1,30 @@
 (ns lytek.spec
+  "Contains the spec definitions for Lytek's data model, seperated
+  by section. 
+  
+  The spec here serves the following purposes:
+    1. Defining the data model for the Lytek library
+    1. Human-accessable documentation for the shape of Lytek data
+    1. Data 'shape' validation for API calls
+    1. Data shape coersion for API calls
+    1. Data generation for testing purposes
+
+  In order to meet these goals, the specs in this file are bound by the following
+  constraints:
+    1. Any spec must be generatable by spec.gen *without* providing a custom generator
+      + This will ensure that the specs used are generic and common
+    1. Any spec must conform to data which is itself valid according go that spec.
+      + Example- s/cat conforms to a map, which is not valid according to s/cat. Therefore,
+        s/cat should not be used.
+      + Example- s/tuple conforms to a vector, which is valid according to s/tuple. Therefore,
+        s/tuple is acceptable.
+    "  
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [clojure.set :as se]))
+            [clojure.set :as se]
+            [clojure.string :as string]))
 
+(def explanation)  
 
 (def attribute-keys
   [:strength
@@ -43,10 +65,12 @@
    :thrown
    :war])
 
+(defn not-blank? [a] 
+  (not (string/blank? a)))
 
 (s/def :lytek/name
   (s/and string?
-         #(not (empty? %))))
+         not-blank?))       
 
 (s/def :lytek/title
   string?)
@@ -160,10 +184,26 @@
 (s/def :lytek/committed-peripheral
   :lytek/motepool)
 
+(s/def :lytek/intimacy-type
+  #{:principle :tie})
+(s/def :lytek/intimacy-severity
+  #{:defining :major :minor})
+(s/def :lytek/intimacy-feeling
+  string?)
+(s/def :lytek/intimacy
+  (s/tuple :lytek/intimacy-severity
+           :lytek/intimacy-type
+           :lytek/intimacy-feeling
+           (s/and :lytek/description
+                  not-blank?)))
+(s/def :lytek/intimacies
+  (s/coll-of :lytek/intimacy :into [] :min-count 4))  
+
+
 (s/def :lytek/entity
   (s/keys :req-un [:lytek/category
                    :lytek/name
-                   :lytek/owner]))
+                   :lytek/description]))
 
 (s/def :lytek/combatant
   (s/merge :lytek/entity
@@ -172,19 +212,19 @@
                             :lytek/abilities
                             :lytek/additional-abilities
                             :lytek/willpower-maximum
-                            :lytek/willpower-temporary])))
+                            :lytek/willpower-temporary
+                            :lytek/intimacies])))
 
 (s/def :lytek/character
   (s/and
-    (s/merge :lytek/entity
-             :lytek/combatant
+    (s/merge :lytek/combatant
              (s/keys :req-un [:lytek/character-type
                               :lytek/anima
                               :lytek/rulebooks
-                              :lytek/charms]
-                      :opt-un [:lytek/background
-                               :lytek/title]))
-             
+                              :lytek/charms
+                              :lytek/owner]
+                     :opt-un [:lytek/background
+                              :lytek/title]))
     #(= (:category %) :character)))
 
 (s/def :lytek/enlightened
